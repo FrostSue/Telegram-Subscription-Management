@@ -325,7 +325,11 @@ class UserBillingRepository:
     ) -> List[Dict[str, Any]]:
         with self.manager.cursor() as cursor:
             cursor.execute(
-                "SELECT * FROM user_billing WHERE chat_id = ? AND year = ? AND month = ?",
+                """
+                SELECT b.*, m.member_id FROM user_billing b
+                LEFT JOIN group_members m ON b.chat_id = m.chat_id AND b.user_id = m.user_id
+                WHERE b.chat_id = ? AND b.year = ? AND b.month = ?
+                """,
                 (chat_id, year, month)
             )
             billings = [dict(row) for row in cursor.fetchall()]
