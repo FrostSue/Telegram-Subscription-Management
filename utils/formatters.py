@@ -36,7 +36,7 @@ class ListFormatter:
             lines.append("No active bills for this month.")
         else:
             for idx, bill in enumerate(billings, 1):
-                bill_id = bill["id"]
+                display_id = bill.get("member_id", bill["id"])
                 username = bill["username"]
                 amount = bill["amount"]
                 is_paid = bill["is_paid"]
@@ -45,7 +45,7 @@ class ListFormatter:
                 codes_str = f" [{', '.join(codes)}]" if codes else ""
                 
                 status_text = "Paid" if is_paid else "Unpaid"
-                line_content = f"{idx}. {username} - {amount} {currency}{codes_str} ({status_text}) (ID: {bill_id})"
+                line_content = f"{idx}. {username} - {amount} {currency}{codes_str} ({status_text}) (ID: {display_id})"
                 
                 if is_paid:
                     lines.append(f"<s>{line_content}</s>")
