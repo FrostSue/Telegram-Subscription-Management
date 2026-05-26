@@ -170,3 +170,26 @@ class CommandValidator:
                 raise ValueError("Discount must be a valid number.")
                 
         return sub_id, cost, discount
+
+    @staticmethod
+    def parse_set_individual_price(args: list) -> Tuple[int, Optional[int]]:
+        if len(args) < 2:
+            raise ValueError("Usage: /set_individual_price <sub_id> <amount/auto>")
+        
+        try:
+            sub_id = int(args[0])
+        except ValueError:
+            raise ValueError("Subscription ID must be an integer.")
+            
+        amount_str = args[1].strip().lower()
+        if amount_str == "auto":
+            amount = None
+        else:
+            try:
+                amount = int(amount_str)
+                if amount < 0:
+                    raise ValueError("Amount cannot be negative.")
+            except ValueError:
+                raise ValueError("Amount must be an integer or 'auto'.")
+                
+        return sub_id, amount
