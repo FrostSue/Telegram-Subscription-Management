@@ -20,11 +20,17 @@ def initialize_database(manager: ConnectionManager) -> None:
                 short_code TEXT NOT NULL,
                 cost REAL NOT NULL,
                 discount REAL NOT NULL DEFAULT 0.0,
+                manual_individual_amount INTEGER DEFAULT NULL,
                 FOREIGN KEY (chat_id) REFERENCES group_settings (chat_id) ON DELETE CASCADE,
                 UNIQUE (chat_id, title),
                 UNIQUE (chat_id, short_code)
             )
         """)
+
+        try:
+            conn.execute("ALTER TABLE subscriptions ADD COLUMN manual_individual_amount INTEGER DEFAULT NULL")
+        except Exception:
+            pass
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS subscription_members (
