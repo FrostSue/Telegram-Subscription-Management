@@ -65,7 +65,9 @@ class ListFormatter:
                 discount = sub["discount"]
                 members_count = len(sub.get("members", []))
                 
-                if members_count > 0:
+                if sub.get("manual_individual_amount") is not None:
+                    share = sub["manual_individual_amount"]
+                elif members_count > 0:
                     share = math.ceil((cost - discount) / members_count)
                 else:
                     share = math.ceil(cost - discount)
