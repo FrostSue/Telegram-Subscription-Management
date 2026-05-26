@@ -2,7 +2,7 @@ import sqlite3
 import threading
 from contextlib import contextmanager
 
-_lock = threading.Lock()
+_lock = threading.RLock()
 _local = threading.local()
 
 class ConnectionManager:
