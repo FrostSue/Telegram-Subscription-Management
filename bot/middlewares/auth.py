@@ -1,3 +1,4 @@
+import logging
 from functools import wraps
 from pyrogram import Client
 from pyrogram.types import Message
@@ -14,10 +15,11 @@ def requires_admin(func):
             
         try:
             member = await client.get_chat_member(message.chat.id, message.from_user.id)
+            logging.info(f"Admin check for user {message.from_user.id} in chat {message.chat.id}. Status: {member.status}")
             if member.status in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
                 return await func(client, message, *args, **kwargs)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"Admin check failed with exception: {str(e)}")
             
         await message.reply_text("This command is restricted to group administrators.")
     return decorator
