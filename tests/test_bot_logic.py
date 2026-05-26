@@ -148,5 +148,27 @@ class TestSubscriptionBotLogic(unittest.TestCase):
         self.assertEqual(cost_v, 250.0)
         self.assertEqual(discount_v, 30.0)
 
+    def test_manual_individual_price_override(self):
+        chat_id = 8888
+        self.group_repo.get_or_create(chat_id)
+        
+        sub_id = self.sub_repo.add_subscription(chat_id, "Netflix Premium", "NF", 200.0, 20.0)
+        sub = self.sub_repo.get_subscription_by_id(chat_id, sub_id)
+        self.assertIsNone(sub["manual_individual_amount"])
+        
+        success = self.sub_repo.update_subscription_manual_individual_amount(chat_id, sub_id, 35)
+        self.assertTrue(success)
+        
+        sub_updated = self.sub_repo.get_subscription_by_id(chat_id, sub_id)
+        self.assertEqual(sub_updated["manual_individual_amount"], 35)
+        
+        sub_id_v, amount_v = CommandValidator.parse_set_individual_price([str(sub_id), "40"])
+        self.assertEqual(sub_id_v, sub_id)
+        self.assertEqual(amount_v, 40)
+        
+        sub_id_v2, amount_v2 = CommandValidator.parse_set_individual_price([str(sub_id), "auto"])
+        self.assertEqual(sub_id_v2, sub_id)
+        self.assertIsNone(amount_v2)
+
 if __name__ == "__main__":
     unittest.main()
