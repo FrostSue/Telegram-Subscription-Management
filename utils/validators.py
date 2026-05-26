@@ -62,18 +62,17 @@ class CommandValidator:
 
     @staticmethod
     def parse_set_iban(args: list) -> Tuple[str, str]:
-        if len(args) < 2:
-            raise ValueError("Usage: /set_iban <iban> <account_holder_name>")
+        import re
+        full_text = " ".join(args).strip()
+        match = re.match(r"^([A-Z]{2}\s*(?:\d\s*){15,32})\s+(.+)$", full_text, re.IGNORECASE)
+        if not match:
+            raise ValueError(
+                "Usage: /set_iban <iban> <account_holder_name>\n"
+                "Example: /set_iban TR12 3456 7890 1234 5678 9012 34 Ahmet Yilmaz"
+            )
         
-        iban = args[0].strip().replace(" ", "").upper()
-        name = " ".join(args[1:]).strip()
-        
-        if not iban.isalnum() or len(iban) < 15:
-            raise ValueError("IBAN must be a valid alphanumeric code of at least 15 characters.")
-            
-        if not name:
-            raise ValueError("Account holder name cannot be empty.")
-            
+        iban = match.group(1).replace(" ", "").upper()
+        name = match.group(2).strip()
         return iban, name
 
     @staticmethod
@@ -141,3 +140,33 @@ class CommandValidator:
                 raise ValueError("Year must be an integer.")
                 
         return year, month
+
+    @staticmethod
+    def parse_set_cost(args: list) -> Tuple[int, float, float]:
+        if len(args) < 2:
+            raise ValueError("Usage: /set_cost <sub_id> <new_cost> [new_discount]")
+        
+        try:
+            sub_id = int(args[0])
+        except ValueError:
+            raise ValueError("Subscription ID must be an integer.")
+            
+        try:
+            cost = float(args[1])
+            if cost <= 0:
+                raise ValueError("Cost must be greater than zero.")
+        except ValueError:
+            raise ValueError("Cost must be a valid number.")
+            
+        discount = 0.0
+        if len(args) >= 3:
+            try:
+                discount = float(args[2])
+                if discount < 0:
+                    raise ValueError("Discount cannot be negative.")
+                if discount >= cost:
+                    raise ValueError("Discount must be less than cost.")
+            except ValueError:
+                raise ValueError("Discount must be a valid number.")
+                
+        return sub_id, cost, discount
