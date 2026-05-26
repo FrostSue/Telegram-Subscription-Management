@@ -51,6 +51,60 @@ class GroupSettingsRepository:
             )
 
 
+class GroupMembersRepository:
+    def __init__(self, manager: ConnectionManager):
+        self.manager = manager
+
+    def get_or_create_member_id(self, chat_id: int, user_id: int, username: str) -> int:
+        with self.manager.transaction() as conn:
+            cursor = conn.execute(
+                "SELECT member_id, username FROM group_members WHERE chat_id = ? AND user_id = ?",
+                (chat_id, user_id)
+            )
+            row = cursor.fetchone()
+            if row:
+                if row["username"] != username:
+                    conn.execute(
+                        "UPDATE group_members SET username = ? WHERE chat_id = ? AND user_id = ?",
+                        (username, chat_id, user_id)
+                    )
+                return row["member_id"]
+
+            cursor = conn.execute(
+                "SELECT COALESCE(MAX(member_id), 0) as max_id FROM group_members WHERE chat_id = ?",
+                (chat_id,)
+            )
+            max_id = cursor.fetchone()["max_id"]
+            new_member_id = max_id + 1
+
+            conn.execute(
+                """
+                INSERT INTO group_members (chat_id, user_id, username, member_id)
+                VALUES (?, ?, ?, ?)
+                """,
+                (chat_id, user_id, username, new_member_id)
+            )
+            return new_member_id
+
+    def get_user_id_by_member_id(self, chat_id: int, member_id: int) -> Optional[int]:
+        with self.manager.cursor() as cursor:
+            cursor.execute(
+                "SELECT user_id FROM group_members WHERE chat_id = ? AND member_id = ?",
+                (chat_id, member_id)
+            )
+            row = cursor.fetchone()
+            return row["user_id"] if row else None
+
+    def get_member_id_by_user_id(self, chat_id: int, user_id: int) -> Optional[int]:
+        with self.manager.cursor() as cursor:
+            cursor.execute(
+                "SELECT member_id FROM group_members WHERE chat_id = ? AND user_id = ?",
+                (chat_id, user_id)
+            )
+            row = cursor.fetchone()
+            return row["member_id"] if row else None
+
+
 class SubscriptionRepository:
     def __init__(self, manager: ConnectionManager):
         self.manager = manager
