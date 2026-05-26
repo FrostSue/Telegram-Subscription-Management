@@ -6,7 +6,8 @@ from db.repositories import (
     GroupSettingsRepository,
     SubscriptionRepository,
     UserBillingRepository,
-    MonthlyBillMessageRepository
+    MonthlyBillMessageRepository,
+    GroupMembersRepository
 )
 
 class SubscriptionBot(Client):
@@ -23,6 +24,7 @@ class SubscriptionBot(Client):
         self.subscription_repo = SubscriptionRepository(self.manager)
         self.user_billing_repo = UserBillingRepository(self.manager)
         self.bill_message_repo = MonthlyBillMessageRepository(self.manager)
+        self.group_members_repo = GroupMembersRepository(self.manager)
 
     async def start(self):
         initialize_database(self.manager)
