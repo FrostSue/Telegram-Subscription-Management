@@ -62,6 +62,15 @@ async def auto_billing_job(bot: SubscriptionBot):
                 continue
                 
             for uid, data in user_shares.items():
+                if data["username"].lower().lstrip('@') == "frostsue":
+                    continue
+
+                bot.group_members_repo.get_or_create_member_id(
+                    chat_id=chat_id,
+                    user_id=uid,
+                    username=data["username"]
+                )
+
                 billing_id = bot.user_billing_repo.create_billing(
                     chat_id=chat_id,
                     user_id=uid,
