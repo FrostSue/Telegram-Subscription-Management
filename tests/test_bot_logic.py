@@ -127,5 +127,26 @@ class TestSubscriptionBotLogic(unittest.TestCase):
         self.assertIn("IBAN: <code>TR1234</code>", formatted)
         self.assertIn("Name: John Doe", formatted)
 
+    def test_subscription_cost_update(self):
+        chat_id = 9999
+        self.group_repo.get_or_create(chat_id)
+        
+        sub_id = self.sub_repo.add_subscription(chat_id, "YouTube Premium", "YT", 150.0, 10.0)
+        sub = self.sub_repo.get_subscription_by_id(chat_id, sub_id)
+        self.assertEqual(sub["cost"], 150.0)
+        self.assertEqual(sub["discount"], 10.0)
+        
+        success = self.sub_repo.update_subscription_cost(chat_id, sub_id, 200.0, 20.0)
+        self.assertTrue(success)
+        
+        sub_updated = self.sub_repo.get_subscription_by_id(chat_id, sub_id)
+        self.assertEqual(sub_updated["cost"], 200.0)
+        self.assertEqual(sub_updated["discount"], 20.0)
+        
+        sub_id_v, cost_v, discount_v = CommandValidator.parse_set_cost([str(sub_id), "250.0", "30.0"])
+        self.assertEqual(sub_id_v, sub_id)
+        self.assertEqual(cost_v, 250.0)
+        self.assertEqual(discount_v, 30.0)
+
 if __name__ == "__main__":
     unittest.main()
