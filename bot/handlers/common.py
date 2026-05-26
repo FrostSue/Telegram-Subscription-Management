@@ -29,6 +29,7 @@ async def help_command(client: Client, message: Message):
         "/set_iban &lt;iban&gt; &lt;account_holder_name&gt; - Update group bank transfer details.\n"
         "/set_currency &lt;currency_symbol&gt; - Set group's display currency.\n"
         "/set_debt &lt;billing_id&gt; &lt;new_amount&gt; - Manually adjust a member's bill.\n"
+        "/set_cost &lt;sub_id&gt; &lt;new_cost&gt; [new_discount] - Manually update subscription cost/discount.\n"
         "/unpaid &lt;billing_id&gt; - Revert a payment status to unpaid.\n"
         "/billing [month] [year] - Generate consolidated billing list for the month.\n"
         "/help - Display this help manual."
