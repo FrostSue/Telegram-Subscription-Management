@@ -35,7 +35,10 @@ async def auto_billing_job(bot: SubscriptionBot):
                 if members_count == 0:
                     continue
                     
-                individual_amount = math.ceil((sub["cost"] - sub["discount"]) / members_count)
+                if sub.get("manual_individual_amount") is not None:
+                    individual_amount = sub["manual_individual_amount"]
+                else:
+                    individual_amount = math.ceil((sub["cost"] - sub["discount"]) / members_count)
                 for member in members:
                     uid = member["user_id"]
                     uname = member["username"]
