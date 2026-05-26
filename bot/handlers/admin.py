@@ -261,3 +261,30 @@ async def billing_command(client: Client, message: Message):
     
     sent_msg = await message.reply_text(formatted_text)
     client.bill_message_repo.save_message_id(message.chat.id, year, month, sent_msg.id)
+
+@Client.on_message(filters.command("set_cost"))
+@requires_admin
+async def set_cost_command(client: Client, message: Message):
+    args = message.command[1:]
+    try:
+        sub_id, cost, discount = CommandValidator.parse_set_cost(args)
+    except ValueError as e:
+        await message.reply_text(str(e))
+        return
+
+    success = client.subscription_repo.update_subscription_cost(
+        chat_id=message.chat.id,
+        subscription_id=sub_id,
+        cost=cost,
+        discount=discount
+    )
+
+    if success:
+        await message.reply_text(
+            f"Subscription ID {sub_id} cost updated successfully!\n"
+            f"New Cost: {cost}\n"
+            f"New Discount: {discount}\n\n"
+            f"💡 Run /billing to regenerate the monthly bills under the new pricing."
+        )
+    else:
+        await message.reply_text("Failed to update subscription cost. Check if Subscription ID exists.")
