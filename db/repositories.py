@@ -81,6 +81,24 @@ class SubscriptionRepository:
             )
             return cursor.rowcount > 0
 
+    def update_subscription_cost(
+        self,
+        chat_id: int,
+        subscription_id: int,
+        cost: float,
+        discount: float = 0.0
+    ) -> bool:
+        with self.manager.transaction() as conn:
+            cursor = conn.execute(
+                """
+                UPDATE subscriptions 
+                SET cost = ?, discount = ? 
+                WHERE id = ? AND chat_id = ?
+                """,
+                (cost, discount, subscription_id, chat_id)
+            )
+            return cursor.rowcount > 0
+
     def get_subscriptions(self, chat_id: int) -> List[Dict[str, Any]]:
         with self.manager.cursor() as cursor:
             cursor.execute(
