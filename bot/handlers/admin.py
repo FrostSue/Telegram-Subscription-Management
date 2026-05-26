@@ -106,7 +106,11 @@ async def set_iban_command(client: Client, message: Message):
         return
 
     client.group_settings_repo.update_iban(message.chat.id, iban, name)
-    await message.reply_text("IBAN settings updated successfully.")
+    await message.reply_text(
+        f"IBAN settings updated successfully!\n"
+        f"IBAN: <code>{iban}</code>\n"
+        f"Name: {name}"
+    )
 
 @Client.on_message(filters.command("set_currency"))
 @requires_admin
