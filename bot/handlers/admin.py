@@ -213,7 +213,10 @@ async def billing_command(client: Client, message: Message):
         if members_count == 0:
             continue
             
-        individual_amount = math.ceil((sub["cost"] - sub["discount"]) / members_count)
+        if sub.get("manual_individual_amount") is not None:
+            individual_amount = sub["manual_individual_amount"]
+        else:
+            individual_amount = math.ceil((sub["cost"] - sub["discount"]) / members_count)
         for member in members:
             uid = member["user_id"]
             uname = member["username"]
@@ -288,3 +291,33 @@ async def set_cost_command(client: Client, message: Message):
         )
     else:
         await message.reply_text("Failed to update subscription cost. Check if Subscription ID exists.")
+
+@Client.on_message(filters.command("set_individual_price"))
+@requires_admin
+async def set_individual_price_command(client: Client, message: Message):
+    args = message.command[1:]
+    try:
+        sub_id, amount = CommandValidator.parse_set_individual_price(args)
+    except ValueError as e:
+        await message.reply_text(str(e))
+        return
+
+    success = client.subscription_repo.update_subscription_manual_individual_amount(
+        chat_id=message.chat.id,
+        subscription_id=sub_id,
+        amount=amount
+    )
+
+    if success:
+        if amount is not None:
+            await message.reply_text(
+                f"Subscription ID {sub_id} individual share price updated to {amount} successfully!\n\n"
+                f"💡 Run /billing to regenerate the monthly bills under the new pricing."
+            )
+        else:
+            await message.reply_text(
+                f"Subscription ID {sub_id} individual share price has been reset to automatic calculation!\n\n"
+                f"💡 Run /billing to regenerate the monthly bills under the new pricing."
+            )
+    else:
+        await message.reply_text("Failed to update subscription individual price. Check if Subscription ID exists.")
