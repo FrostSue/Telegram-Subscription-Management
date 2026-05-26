@@ -4,6 +4,21 @@ from pyrogram.enums import ChatMemberStatus
 from utils.validators import CommandValidator
 from utils.formatters import ListFormatter
 
+async def get_active_billing_by_member(client: Client, chat_id: int, member_id: int):
+    user_id = client.group_members_repo.get_user_id_by_member_id(chat_id, member_id)
+    if not user_id:
+        return None, None
+    with client.manager.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM user_billing WHERE chat_id = ? AND user_id = ? ORDER BY year DESC, month DESC LIMIT 1",
+            (chat_id, user_id)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None, None
+        billing_id = row["id"]
+    return client.user_billing_repo.get_billing_by_id(chat_id, billing_id), billing_id
+
 @Client.on_message(filters.command("paid"))
 async def paid_command(client: Client, message: Message):
     if not message.chat or not message.from_user:
@@ -11,14 +26,14 @@ async def paid_command(client: Client, message: Message):
         
     args = message.command[1:]
     try:
-        billing_id = CommandValidator.parse_paid_unpaid(args, "paid")
+        member_id = CommandValidator.parse_paid_unpaid(args, "paid")
     except ValueError as e:
         await message.reply_text(str(e))
         return
 
-    billing = client.user_billing_repo.get_billing_by_id(message.chat.id, billing_id)
+    billing, billing_id = await get_active_billing_by_member(client, message.chat.id, member_id)
     if not billing:
-        await message.reply_text("Billing ID not found or does not belong to this group.")
+        await message.reply_text("Member ID not found or has no active bills.")
         return
 
     is_admin = False
@@ -36,7 +51,7 @@ async def paid_command(client: Client, message: Message):
 
     success = client.user_billing_repo.update_payment_status(message.chat.id, billing_id, 1)
     if success:
-        await message.reply_text(f"Billing ID {billing_id} marked as Paid.")
+        await message.reply_text(f"Member ID {member_id} marked as Paid.")
         
         year, month = billing["year"], billing["month"]
         billings = client.user_billing_repo.get_billings_for_month(message.chat.id, year, month)
