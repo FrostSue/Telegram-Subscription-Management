@@ -170,5 +170,27 @@ class TestSubscriptionBotLogic(unittest.TestCase):
         self.assertEqual(sub_id_v2, sub_id)
         self.assertIsNone(amount_v2)
 
+    def test_stable_member_ids_and_beneficiary_exclusions(self):
+        from db.repositories import GroupMembersRepository
+        group_members_repo = GroupMembersRepository(self.manager)
+        
+        chat_id = 7777
+        self.group_repo.get_or_create(chat_id)
+        
+        mid1 = group_members_repo.get_or_create_member_id(chat_id, 100, "@alice")
+        mid2 = group_members_repo.get_or_create_member_id(chat_id, 200, "@bob")
+        
+        self.assertEqual(mid1, 1)
+        self.assertEqual(mid2, 2)
+        
+        mid1_again = group_members_repo.get_or_create_member_id(chat_id, 100, "@alice")
+        self.assertEqual(mid1_again, 1)
+        
+        uid = group_members_repo.get_user_id_by_member_id(chat_id, 1)
+        self.assertEqual(uid, 100)
+        
+        uid_none = group_members_repo.get_user_id_by_member_id(chat_id, 99)
+        self.assertIsNone(uid_none)
+
 if __name__ == "__main__":
     unittest.main()
