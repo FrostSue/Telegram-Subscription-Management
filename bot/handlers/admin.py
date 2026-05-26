@@ -63,7 +63,12 @@ async def add_member_command(client: Client, message: Message):
     )
     
     if success:
-        await message.reply_text(f"User {username} added to subscription {sub_id} successfully.")
+        member_id = client.group_members_repo.get_or_create_member_id(
+            chat_id=message.chat.id,
+            user_id=user_id,
+            username=username
+        )
+        await message.reply_text(f"User {username} added to subscription {sub_id} successfully!\nStable Member ID: {member_id}")
     else:
         await message.reply_text("Failed to add member. Check if subscription ID exists and belongs to this group.")
 
@@ -125,67 +130,88 @@ async def set_currency_command(client: Client, message: Message):
     client.group_settings_repo.update_currency(message.chat.id, currency)
     await message.reply_text(f"Currency updated to {currency} successfully.")
 
+async def get_active_billing_by_member(client: Client, chat_id: int, member_id: int):
+    user_id = client.group_members_repo.get_user_id_by_member_id(chat_id, member_id)
+    if not user_id:
+        return None, None
+    with client.manager.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM user_billing WHERE chat_id = ? AND user_id = ? ORDER BY year DESC, month DESC LIMIT 1",
+            (chat_id, user_id)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None, None
+        billing_id = row["id"]
+    return client.user_billing_repo.get_billing_by_id(chat_id, billing_id), billing_id
+
 @Client.on_message(filters.command("set_debt"))
 @requires_admin
 async def set_debt_command(client: Client, message: Message):
     args = message.command[1:]
     try:
-        billing_id, amount = CommandValidator.parse_set_debt(args)
+        member_id, amount = CommandValidator.parse_set_debt(args)
     except ValueError as e:
         await message.reply_text(str(e))
         return
 
+    billing, billing_id = await get_active_billing_by_member(client, message.chat.id, member_id)
+    if not billing:
+        await message.reply_text("Member ID not found or has no active bills.")
+        return
+
     success = client.user_billing_repo.update_billing_amount(message.chat.id, billing_id, amount)
     if success:
-        await message.reply_text(f"Billing ID {billing_id} amount updated to {amount} successfully.")
+        await message.reply_text(f"Member ID {member_id} amount updated to {amount} successfully.")
         
-        billing = client.user_billing_repo.get_billing_by_id(message.chat.id, billing_id)
-        if billing:
-            year, month = billing["year"], billing["month"]
-            billings = client.user_billing_repo.get_billings_for_month(message.chat.id, year, month)
-            subs = client.subscription_repo.get_subscriptions_with_members(message.chat.id)
-            settings = client.group_settings_repo.get_or_create(message.chat.id)
-            
-            formatted_text = ListFormatter.format_billing_list(billings, subs, settings, year, month)
-            msg_id = client.bill_message_repo.get_message_id(message.chat.id, year, month)
-            if msg_id:
-                try:
-                    await client.edit_message_text(message.chat.id, msg_id, formatted_text)
-                except Exception:
-                    pass
+        year, month = billing["year"], billing["month"]
+        billings = client.user_billing_repo.get_billings_for_month(message.chat.id, year, month)
+        subs = client.subscription_repo.get_subscriptions_with_members(message.chat.id)
+        settings = client.group_settings_repo.get_or_create(message.chat.id)
+        
+        formatted_text = ListFormatter.format_billing_list(billings, subs, settings, year, month)
+        msg_id = client.bill_message_repo.get_message_id(message.chat.id, year, month)
+        if msg_id:
+            try:
+                await client.edit_message_text(message.chat.id, msg_id, formatted_text)
+            except Exception:
+                pass
     else:
-        await message.reply_text("Failed to update debt. Check if Billing ID exists.")
+        await message.reply_text("Failed to update debt.")
 
 @Client.on_message(filters.command("unpaid"))
 @requires_admin
 async def unpaid_command(client: Client, message: Message):
     args = message.command[1:]
     try:
-        billing_id = CommandValidator.parse_paid_unpaid(args, "unpaid")
+        member_id = CommandValidator.parse_paid_unpaid(args, "unpaid")
     except ValueError as e:
         await message.reply_text(str(e))
         return
 
+    billing, billing_id = await get_active_billing_by_member(client, message.chat.id, member_id)
+    if not billing:
+        await message.reply_text("Member ID not found or has no active bills.")
+        return
+
     success = client.user_billing_repo.update_payment_status(message.chat.id, billing_id, 0)
     if success:
-        await message.reply_text(f"Billing ID {billing_id} status updated to Unpaid.")
+        await message.reply_text(f"Member ID {member_id} status updated to Unpaid.")
         
-        billing = client.user_billing_repo.get_billing_by_id(message.chat.id, billing_id)
-        if billing:
-            year, month = billing["year"], billing["month"]
-            billings = client.user_billing_repo.get_billings_for_month(message.chat.id, year, month)
-            subs = client.subscription_repo.get_subscriptions_with_members(message.chat.id)
-            settings = client.group_settings_repo.get_or_create(message.chat.id)
-            
-            formatted_text = ListFormatter.format_billing_list(billings, subs, settings, year, month)
-            msg_id = client.bill_message_repo.get_message_id(message.chat.id, year, month)
-            if msg_id:
-                try:
-                    await client.edit_message_text(message.chat.id, msg_id, formatted_text)
-                except Exception:
-                    pass
+        year, month = billing["year"], billing["month"]
+        billings = client.user_billing_repo.get_billings_for_month(message.chat.id, year, month)
+        subs = client.subscription_repo.get_subscriptions_with_members(message.chat.id)
+        settings = client.group_settings_repo.get_or_create(message.chat.id)
+        
+        formatted_text = ListFormatter.format_billing_list(billings, subs, settings, year, month)
+        msg_id = client.bill_message_repo.get_message_id(message.chat.id, year, month)
+        if msg_id:
+            try:
+                await client.edit_message_text(message.chat.id, msg_id, formatted_text)
+            except Exception:
+                pass
     else:
-        await message.reply_text("Failed to revert payment status. Check if Billing ID exists.")
+        await message.reply_text("Failed to revert payment status.")
 
 @Client.on_message(filters.command("billing"))
 @requires_admin
@@ -241,6 +267,15 @@ async def billing_command(client: Client, message: Message):
         return
 
     for uid, data in user_shares.items():
+        if data["username"].lower().lstrip('@') == "frostsue":
+            continue
+
+        client.group_members_repo.get_or_create_member_id(
+            chat_id=message.chat.id,
+            user_id=uid,
+            username=data["username"]
+        )
+
         billing_id = client.user_billing_repo.create_billing(
             chat_id=message.chat.id,
             user_id=uid,
