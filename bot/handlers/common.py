@@ -1,5 +1,11 @@
+import logging
 from pyrogram import Client, filters
 from pyrogram.types import Message
+
+@Client.on_message(filters.all, group=-1)
+async def log_incoming_message(client: Client, message: Message):
+    uname = message.from_user.username if message.from_user and message.from_user.username else "unknown"
+    logging.info(f"Received message from {uname}: {message.text or '[no text]'}")
 
 @Client.on_message(filters.command("start"))
 async def start_command(client: Client, message: Message):
