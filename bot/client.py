@@ -16,7 +16,7 @@ class SubscriptionBot(Client):
             api_id=settings.API_ID,
             api_hash=settings.API_HASH,
             bot_token=settings.BOT_TOKEN,
-            plugins=dict(root="bot/handlers")
+            plugins=dict(root="bot.handlers")
         )
         self.manager = ConnectionManager(settings.DATABASE_PATH)
         self.group_settings_repo = GroupSettingsRepository(self.manager)
